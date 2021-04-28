@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted Chat System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
+    <style>
+        .container {
+            height: 100vh;
+            width: 100%;
+            display: flex;
+        }
+
+        .top {
+            height: 70vh;
+            width: 100%;
+        }
+
+        .bottom {
+            height: 30vh;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="top">
+            <p id="messages"></p>
+        </div>
+        <div class="bottom">
+            <input type="text" id="textInput">
+            <button id="sendit" onclick="sendMsg()">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        var full = location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+        let socket = io.connect(full);
+
+        let pass = "password";
+        let person = '';
+        let room = '';
+
+        person = prompt("Please enter your name:", "");
+        if (person == null || person == "") {
+            location.reload();
+        } else {
+            room = prompt("Please enter your room name:", "");
+            if (room == null || room == "") {
+                location.reload();
+            } else {
+                socket.emit('c', {
+                    roomName: room,
+                    call: person
+                });
+            }
+        }
+
+        socket.on("p", data => {
+            // if (typeof data.public !== "undefined")
+            //     pass = data.public
+        });
+
+        let code = (function () {
+            return {
+                encryptMessage: function (messageToencrypt = '', secretkey = '') {
+                    var encryptedMessage = CryptoJS.AES.encrypt(messageToencrypt, secretkey);
+                    return encryptedMessage.toString();
+                },
+                decryptMessage: function (encryptedMessage = '', secretkey = '') {
+                    var decryptedBytes = CryptoJS.AES.decrypt(encryptedMessage, secretkey);
+                    var decryptedMessage = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+                    return decryptedMessage;
+                }
+            }
+        })();
+
+        socket.on("msg", async data => {
+            // decrypt and show
+            let decrypted = code.decryptMessage(data.msg, pass);
+            let text = data.person + ": " + decrypted;
+
+            document.getElementById('messages').innerHTML += '<br>' + text;
+        });
+
+        function sendMsg(msg) {
+            // encrypt and send
+            document.getElementById('textInput').value 
+
+            let encrypted = code.encryptMessage(document.getElementById('textInput').value, pass);
+
+            socket.emit("msg", {
+                room,
+                msg: encrypted,
+                person
+            });
+            document.getElementById('textInput').value = "";
+        }
+
+        function exit() {
+            socket.emit("exit", { room });
+        }
+    </script>
+</body>
+
+</html>
